@@ -1,0 +1,191 @@
+# LAB 5: Naïve Bayes vs Decision Tree (Combined Script)
+
+# ==============================
+# Import Libraries
+# ==============================
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+    precision_recall_curve,
+    roc_curve,
+    auc
+)
+
+# ==============================
+# Load Dataset
+# ==============================
+data = load_breast_cancer()
+
+df = pd.DataFrame(data.data, columns=data.feature_names)
+df['target'] = data.target
+
+print(df.head())
+print(df.info())
+
+# ==============================
+# Train-Test Split
+# ==============================
+X_train, X_test, y_train, y_test = train_test_split(
+    df.drop('target', axis=1),
+    df['target'],
+    test_size=0.2,
+    random_state=42
+)
+
+print(f"Training Data Shape: {X_train.shape}")
+print(f"Testing Data Shape: {X_test.shape}")
+
+# ==============================
+# NAÏVE BAYES MODEL
+# ==============================
+nb_model = GaussianNB()
+nb_model.fit(X_train, y_train)
+
+nb_pred = nb_model.predict(X_test)
+nb_pred_proba = nb_model.predict_proba(X_test)[:, 1]
+
+# Evaluation
+nb_acc_train = accuracy_score(y_train, nb_model.predict(X_train))
+nb_acc_test = accuracy_score(y_test, nb_pred)
+
+print("\n===== NAÏVE BAYES RESULTS =====")
+print(f"Accuracy: {nb_acc_test:.4f}")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, nb_pred))
+print("\nClassification Report:\n",
+      classification_report(y_test, nb_pred, target_names=data.target_names))
+
+# Precision-Recall Curve
+precision_nb, recall_nb, _ = precision_recall_curve(y_test, nb_pred_proba)
+plt.figure()
+plt.plot(recall_nb, precision_nb, marker='.')
+plt.title('Naïve Bayes Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.show()
+
+# ==============================
+# DECISION TREE MODEL
+# ==============================
+dt_model = DecisionTreeClassifier(random_state=42)
+dt_model.fit(X_train, y_train)
+
+dt_pred = dt_model.predict(X_test)
+dt_pred_proba = dt_model.predict_proba(X_test)[:, 1]
+
+# Evaluation
+dt_acc_train = accuracy_score(y_train, dt_model.predict(X_train))
+dt_acc_test = accuracy_score(y_test, dt_pred)
+
+print("\n===== DECISION TREE RESULTS =====")
+print(f"Accuracy: {dt_acc_test:.4f}")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, dt_pred))
+print("\nClassification Report:\n",
+      classification_report(y_test, dt_pred, target_names=data.target_names))
+
+# Precision-Recall Curve
+precision_dt, recall_dt, _ = precision_recall_curve(y_test, dt_pred_proba)
+plt.figure()
+plt.plot(recall_dt, precision_dt, marker='.')
+plt.title('Decision Tree Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.show()
+
+# ==============================
+# Decision Tree Visualization
+# ==============================
+plt.figure(figsize=(20, 10))
+plot_tree(
+    dt_model,
+    filled=True,
+    feature_names=list(data.feature_names),
+    class_names=list(data.target_names),
+    max_depth=3,
+    fontsize=10
+)
+plt.title("Decision Tree Visualization")
+plt.show()
+
+# ==============================
+# COMPARISON SECTION
+# ==============================
+
+# 1. Accuracy Comparison
+labels = ['Naïve Bayes', 'Decision Tree']
+train_acc = [nb_acc_train, dt_acc_train]
+test_acc = [nb_acc_test, dt_acc_test]
+
+x = np.arange(len(labels))
+width = 0.35
+
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.bar(x - width/2, train_acc, width, label='Training Accuracy')
+ax.bar(x + width/2, test_acc, width, label='Testing Accuracy')
+
+ax.set_ylabel('Accuracy')
+ax.set_title('Training vs Testing Accuracy Comparison')
+ax.set_xticks(x)
+ax.set_xticklabels(labels)
+ax.legend(loc='lower left')
+
+plt.show()
+
+# ==============================
+# ROC Curve Comparison
+# ==============================
+fpr_nb, tpr_nb, _ = roc_curve(y_test, nb_pred_proba)
+roc_auc_nb = auc(fpr_nb, tpr_nb)
+
+fpr_dt, tpr_dt, _ = roc_curve(y_test, dt_pred_proba)
+roc_auc_dt = auc(fpr_dt, tpr_dt)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr_nb, tpr_nb, label=f'Naïve Bayes (AUC = {roc_auc_nb:.2f})')
+plt.plot(fpr_dt, tpr_dt, label=f'Decision Tree (AUC = {roc_auc_dt:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Comparison')
+plt.legend(loc='lower right')
+
+plt.show()
+
+# ==============================
+# Confusion Matrix Heatmaps
+# ==============================
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+sns.heatmap(confusion_matrix(y_test, nb_pred),
+            annot=True, fmt='d', cmap='Blues',
+            ax=axes[0],
+            xticklabels=data.target_names,
+            yticklabels=data.target_names)
+
+axes[0].set_title('Naïve Bayes Confusion Matrix')
+axes[0].set_xlabel('Predicted')
+axes[0].set_ylabel('Actual')
+
+sns.heatmap(confusion_matrix(y_test, dt_pred),
+            annot=True, fmt='d', cmap='Greens',
+            ax=axes[1],
+            xticklabels=data.target_names,
+            yticklabels=data.target_names)
+
+axes[1].set_title('Decision Tree Confusion Matrix')
+axes[1].set_xlabel('Predicted')
+axes[1].set_ylabel('Actual')
+
+plt.show()
+
+print("\nAll models trained, evaluated, and compared successfully!")
