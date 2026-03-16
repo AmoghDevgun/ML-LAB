@@ -1,0 +1,171 @@
+# LAB 6: KNN vs SVM Classification (Combined Script)
+
+# ==============================
+# Import Libraries
+# ==============================
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+    precision_recall_curve,
+    roc_curve,
+    auc
+)
+
+# ==============================
+# Load Dataset
+# ==============================
+data = load_breast_cancer()
+
+df = pd.DataFrame(data.data, columns=data.feature_names)
+df['target'] = data.target
+
+# Train-test split (80:20)
+X_train, X_test, y_train, y_test = train_test_split(
+    df.drop('target', axis=1),
+    df['target'],
+    test_size=0.2,
+    random_state=42
+)
+
+print(f"Training Data Shape: {X_train.shape}")
+print(f"Testing Data Shape: {X_test.shape}")
+
+# ==============================
+# KNN MODEL
+# ==============================
+knn_model = KNeighborsClassifier(n_neighbors=5)
+knn_model.fit(X_train, y_train)
+
+knn_pred = knn_model.predict(X_test)
+knn_pred_proba = knn_model.predict_proba(X_test)[:, 1]
+
+# Evaluation
+knn_acc_train = accuracy_score(y_train, knn_model.predict(X_train))
+knn_acc_test = accuracy_score(y_test, knn_pred)
+
+print("\n===== KNN RESULTS =====")
+print(f"Accuracy: {knn_acc_test:.4f}")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, knn_pred))
+print("\nClassification Report:\n",
+      classification_report(y_test, knn_pred, target_names=data.target_names))
+
+# Precision-Recall Curve
+precision_knn, recall_knn, _ = precision_recall_curve(y_test, knn_pred_proba)
+plt.figure()
+plt.plot(recall_knn, precision_knn, marker='.')
+plt.title('KNN Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.show()
+
+# ==============================
+# SVM MODEL
+# ==============================
+svm_model = SVC(kernel='linear', probability=True, random_state=42)
+svm_model.fit(X_train, y_train)
+
+svm_pred = svm_model.predict(X_test)
+svm_pred_proba = svm_model.predict_proba(X_test)[:, 1]
+
+# Evaluation
+svm_acc_train = accuracy_score(y_train, svm_model.predict(X_train))
+svm_acc_test = accuracy_score(y_test, svm_pred)
+
+print("\n===== SVM RESULTS =====")
+print(f"Accuracy: {svm_acc_test:.4f}")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, svm_pred))
+print("\nClassification Report:\n",
+      classification_report(y_test, svm_pred, target_names=data.target_names))
+
+# Precision-Recall Curve
+precision_svm, recall_svm, _ = precision_recall_curve(y_test, svm_pred_proba)
+plt.figure()
+plt.plot(recall_svm, precision_svm, marker='.')
+plt.title('SVM Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.show()
+
+# ==============================
+# COMPARISON SECTION
+# ==============================
+
+# 1. Accuracy Comparison Bar Chart
+labels = ['KNN', 'SVM']
+train_acc = [knn_acc_train, svm_acc_train]
+test_acc = [knn_acc_test, svm_acc_test]
+
+x = np.arange(len(labels))
+width = 0.35
+
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.bar(x - width/2, train_acc, width, label='Training Accuracy')
+ax.bar(x + width/2, test_acc, width, label='Testing Accuracy')
+
+ax.set_ylabel('Accuracy')
+ax.set_title('Training vs Testing Accuracy Comparison')
+ax.set_xticks(x)
+ax.set_xticklabels(labels)
+ax.legend(loc='lower left')
+
+plt.show()
+
+# ==============================
+# ROC Curve Comparison
+# ==============================
+fpr_knn, tpr_knn, _ = roc_curve(y_test, knn_pred_proba)
+roc_auc_knn = auc(fpr_knn, tpr_knn)
+
+fpr_svm, tpr_svm, _ = roc_curve(y_test, svm_pred_proba)
+roc_auc_svm = auc(fpr_svm, tpr_svm)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr_knn, tpr_knn, label=f'KNN (AUC = {roc_auc_knn:.2f})')
+plt.plot(fpr_svm, tpr_svm, label=f'SVM (AUC = {roc_auc_svm:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve Comparison')
+plt.legend(loc='lower right')
+
+plt.show()
+
+# ==============================
+# Confusion Matrix Heatmaps
+# ==============================
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+sns.heatmap(confusion_matrix(y_test, knn_pred),
+            annot=True, fmt='d', cmap='Blues',
+            ax=axes[0],
+            xticklabels=data.target_names,
+            yticklabels=data.target_names)
+
+axes[0].set_title('KNN Confusion Matrix')
+axes[0].set_xlabel('Predicted')
+axes[0].set_ylabel('Actual')
+
+sns.heatmap(confusion_matrix(y_test, svm_pred),
+            annot=True, fmt='d', cmap='Greens',
+            ax=axes[1],
+            xticklabels=data.target_names,
+            yticklabels=data.target_names)
+
+axes[1].set_title('SVM Confusion Matrix')
+axes[1].set_xlabel('Predicted')
+axes[1].set_ylabel('Actual')
+
+plt.show()
+
+print("\nAll models trained, evaluated, and compared successfully!")
