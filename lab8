@@ -1,0 +1,111 @@
+# =========================
+# LAB 8: CLUSTERING
+# =========================
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.metrics import accuracy_score, silhouette_score, confusion_matrix
+
+from scipy.cluster.hierarchy import dendrogram, linkage
+
+# Load Data
+data = pd.read_csv("iris/iris.data", header=None,
+                   names=["sl", "sw", "pl", "pw", "sp"])
+
+le = LabelEncoder()
+y = le.fit_transform(data["sp"])
+X = data.drop("sp", axis=1)
+
+# Split & Scale
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# -------------------------
+# K-Means
+# -------------------------
+kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans.fit(X_train_scaled)
+
+test_clusters_km = kmeans.predict(X_test_scaled)
+
+# NOTE: No mapping logic given in file
+y_test_pred_km = test_clusters_km
+
+print("K-Means Accuracy:",
+      accuracy_score(y_test, y_test_pred_km))
+print("K-Means Silhouette:",
+      silhouette_score(X_test_scaled, test_clusters_km))
+
+
+# -------------------------
+# Hierarchical
+# -------------------------
+hierarchical = AgglomerativeClustering(n_clusters=3)
+test_clusters_hc = hierarchical.fit_predict(X_test_scaled)
+
+y_test_pred_hc = test_clusters_hc
+
+print("Hierarchical Accuracy:",
+      accuracy_score(y_test, y_test_pred_hc))
+print("Hierarchical Silhouette:",
+      silhouette_score(X_test_scaled, test_clusters_hc))
+
+
+# -------------------------
+# Dendrogram
+# -------------------------
+plt.figure(figsize=(10, 5))
+linked = linkage(X_train_scaled, method='ward')
+dendrogram(linked)
+plt.title("Dendrogram")
+plt.show()
+
+
+# -------------------------
+# Comparison
+# -------------------------
+models = ['K-Means', 'Hierarchical']
+accuracies = [
+    accuracy_score(y_test, y_test_pred_km),
+    accuracy_score(y_test, y_test_pred_hc)
+]
+silhouettes = [
+    silhouette_score(X_test_scaled, test_clusters_km),
+    silhouette_score(X_test_scaled, test_clusters_hc)
+]
+
+x = np.arange(len(models))
+width = 0.35
+
+plt.figure(figsize=(10, 6))
+plt.bar(x - width/2, accuracies, width, label='Accuracy')
+plt.bar(x + width/2, silhouettes, width, label='Silhouette')
+plt.xticks(x, models)
+plt.legend()
+plt.show()
+
+
+# -------------------------
+# Confusion Matrix
+# -------------------------
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+sns.heatmap(confusion_matrix(y_test, y_test_pred_km), annot=True, fmt='d')
+plt.title("K-Means CM")
+
+plt.subplot(1, 2, 2)
+sns.heatmap(confusion_matrix(y_test, y_test_pred_hc), annot=True, fmt='d')
+plt.title("Hierarchical CM")
+
+plt.show()
