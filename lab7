@@ -1,0 +1,125 @@
+# LAB 7: Ensemble Techniques (Bagging, Boosting, Stacking)
+
+# ==============================
+# Import Required Libraries
+# ==============================
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+# Base Models
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+
+# Ensemble Models
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import StackingClassifier
+
+# Evaluation Metrics
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
+)
+
+# ==============================
+# Load Dataset (Iris)
+# ==============================
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+# Train-test split
+x_train, x_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# ==============================
+# Bagging Classifier
+# ==============================
+bagging_model = BaggingClassifier(
+    estimator=DecisionTreeClassifier(),
+    n_estimators=100,
+    random_state=42
+)
+
+bagging_model.fit(x_train, y_train)
+y_pred_bagging = bagging_model.predict(x_test)
+
+# ==============================
+# AdaBoost Classifier
+# ==============================
+adaboost_model = AdaBoostClassifier(
+    estimator=DecisionTreeClassifier(max_depth=1),
+    n_estimators=100,
+    learning_rate=0.5,
+    random_state=42
+)
+
+adaboost_model.fit(x_train, y_train)
+y_pred_adaboost = adaboost_model.predict(x_test)
+
+# ==============================
+# Gradient Boosting Classifier
+# ==============================
+gboost_model = GradientBoostingClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    random_state=42
+)
+
+gboost_model.fit(x_train, y_train)
+y_pred_gboost = gboost_model.predict(x_test)
+
+# ==============================
+# Stacking Classifier
+# ==============================
+base_learners = [
+    ('dt', DecisionTreeClassifier()),
+    ('knn', KNeighborsClassifier()),
+    ('lr', LogisticRegression(max_iter=1000))
+]
+
+stacking_model = StackingClassifier(
+    estimators=base_learners,
+    final_estimator=LogisticRegression(),
+    cv=5
+)
+
+stacking_model.fit(x_train, y_train)
+y_pred_stacking = stacking_model.predict(x_test)
+
+# ==============================
+# Evaluation Function
+# ==============================
+def evaluate_model(name, y_test, y_pred)
+{
+    print(f"\n===== {name} =====")
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("Precision:", precision_score(y_test, y_pred, average='weighted'))
+    print("Recall:", recall_score(y_test, y_pred, average='weighted'))
+    print("F1 Score:", f1_score(y_test, y_pred, average='weighted'))
+    print("\nClassification Report:\n", classification_report(y_test, y_pred))
+    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+}
+
+# ==============================
+# Evaluate All Models
+# ==============================
+evaluate_model("Bagging", y_test, y_pred_bagging)
+evaluate_model("AdaBoost", y_test, y_pred_adaboost)
+evaluate_model("Gradient Boosting", y_test, y_pred_gboost)
+evaluate_model("Stacking", y_test, y_pred_stacking)
+
+print("\nAll models trained and evaluated successfully!")
